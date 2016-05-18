@@ -819,6 +819,64 @@ ADDAPI unsigned char
 ADDCALL psmove_get_trigger(PSMove *move);
 
 /**
+ * \brief Get the inputs from the sharp shooter if there is one
+ *
+ * This function checks if the racing wheel is connected and if
+ * it is it then reads the inputs
+ *
+ * \param move A valid \ref PSMove handle
+ * \param fire Pointer to store if the gun is fired, or \c NULL
+ * \param rl Pointer to store if the gun is reloaded, or \c NULL
+ * \param weap Pointer to store witch weapon is set, or \c NULL
+ *
+ **/
+ADDAPI void //unsigned short
+ADDCALL psmove_get_ext_shooter(PSMove *move, int* fire, int* rl, int* weap);
+
+/**
+ * \brief Get the inputs from the racing wheel if there is one
+ *
+ * This function checks if the racing wheel is connected and if
+ * it is it then reads the inputs
+ *
+ * \param move A valid \ref PSMove handle
+ * \param l Pointer to store the left trigger reading, or \c NULL
+ * \param r Pointer to store the right trigger reading, or \c NULL
+ * \param throt Pointer to store the throttle reading, or \c NULL
+ * \param c1 Pointer to store the left paddle reading, or \c NULL
+ * \param c2 Pointer to store the right paddle reading, or \c NULL
+ *
+ **/
+ADDAPI void //unsigned short
+ADDCALL psmove_get_ext_wheel(PSMove *move, int* l, int* r, int* throt, int* c1, int* c2);
+
+/**
+ * \brief Set the rumble values for the racing wheel if there is one
+ *
+ * This function checks if the racing wheel is connected and if
+ * it is it then set the rumble values
+ *
+ * \param move A valid \ref PSMove handle
+ * \param l Pointer to set the left rumble value, or \c NULL
+ * \param r Pointer to setthe right rumble value, or \c NULL
+ *
+ **/
+ADDAPI void //unsigned short
+ADDCALL psmove_set_ext_wheel(PSMove *move, int ruml, int rumr);
+
+/**
+ * \brief Get the type of extension device connected
+ *
+ * This function checks if the ext devive is connected and if
+ * it is it returns the type (1 = shooter, 2 = wheel, 3 = unknown, 0 = not connected)
+ *
+ * \param move A valid \ref PSMove handle
+ *
+ **/
+ADDAPI unsigned short //unsigned short
+ADDCALL psmove_get_ext_type(PSMove *move);
+
+/**
  * \brief Get the raw accelerometer reading from the PS Move.
  *
  * This function reads the raw (uncalibrated) sensor values from

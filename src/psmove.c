@@ -76,6 +76,17 @@
 #define PSMOVE_MIN_LED_UPDATE_WAIT_MS 120
 
 
+/* device IDs for Sony's official extension devices  */
+#define EXT_DEVICE_ID_SHARP_SHOOTER 0x8081
+#define EXT_DEVICE_ID_RACING_WHEEL  0x8101
+
+enum Extension_Device {
+    Ext_Sharp_Shooter,
+    Ext_Racing_Wheel,
+    Ext_Unknown,
+};
+
+
 enum PSMove_Request_Type {
     PSMove_Req_GetInput = 0x01,
     PSMove_Req_SetLEDs = 0x02,
@@ -263,6 +274,10 @@ psmove_load_magnetometer_calibration(PSMove *move);
 static moved_client_list *clients;
 static int psmove_local_disabled = 0;
 static int psmove_remote_disabled = 0;
+
+/* Is an extension device connected? */
+static int psmove_ext_connected = 0;
+static enum Extension_Device ext_device = Ext_Unknown;
 
 /* Number of valid, open PSMove* handles "in the wild" */
 static int psmove_num_open_handles = 0;
@@ -1596,6 +1611,221 @@ psmove_get_trigger(PSMove *move)
 
     return (move->input.trigger + move->input.trigger2) / 2;
 }
+
+//unsigned short
+void
+psmove_get_ext_shooter(PSMove *move, int* fire, int* rl, int* weap)
+{
+    psmove_return_if_fail(move != NULL);
+    if (psmove_ext_connected == 1);
+    {
+            /* handle button presses etc. for a known extension device only */
+            PSMove_Ext_Data data;
+	    PSMove_Ext_Data *datap = &data;
+            if (psmove_get_ext_data(move, &data)) 
+	    {
+             	assert(datap != NULL);
+		unsigned char const c = (*datap)[0];
+		unsigned char const weapon_idx = c & 7;
+		
+		if (weap != NULL) {
+			printf("SELECTING weapon %c\n", weapon_idx);
+			switch (weapon_idx) {
+				case 1:
+					*weap = 1;
+					break;
+				case 2:
+					*weap = 2;
+					break;
+				case 4:
+					*weap = 3;
+					break;
+				default:
+					*weap = 0;
+					break;
+			}
+		}
+
+		if (c & 0x40) {
+			printf("FIRING weapon");// %c\n", weapon);
+			if (fire !=NULL) {
+				*fire = 1;
+			}
+		} else {
+			if (fire !=NULL) {
+				*fire = 0;
+			}
+		}
+
+		if (c & 0x80) {
+			printf("RELOADING weapon"); // %c\n", weapon);
+			if (rl !=NULL) {
+				*rl = 1;
+			}
+		} else {
+			if (rl !=NULL) {
+				*rl = 0;
+			}
+		}
+		
+            }
+    }
+    //return ext.dev_id;
+}
+
+//unsigned short
+void
+psmove_get_ext_wheel(PSMove *move, int* l, int* r, int* throt, int* c1, int* c2)
+{
+    psmove_return_if_fail(move != NULL);
+
+    if (psmove_ext_connected == 2)
+    { 	
+	PSMove_Ext_Data data;
+	PSMove_Ext_Data *datap = &data;
+        if (psmove_get_ext_data(move, &data)) 
+	{
+		//unsigned int move_buttons = psmove_get_buttons(move);
+
+                //handle_racing_wheel(move, &data, move_buttons);
+					
+		assert(datap != NULL);
+		
+		unsigned char throttle = (*datap)[0];
+		unsigned char l2       = (*datap)[1];
+		unsigned char r2       = (*datap)[2];
+		unsigned char c        = (*datap)[3];
+
+		printf("Throttle: %3d,  L2: %3d,  R2: %3d", throttle, l2, r2);
+
+		if (c & 1) {
+			printf(",  LEFT paddle pressed");
+			if (c1 != NULL) {
+				*c1 = 1;
+			}
+		} else {
+			if (c1 != NULL) {
+				*c1 = 0;
+			}
+		}
+
+		if (c & 2) {
+			printf(",  RIGHT paddle pressed");
+			if (c2 != NULL) {
+				*c2 = 1;
+			}
+		} else {
+			if (c2 != NULL) {
+				*c2 = 0;
+			}
+		}
+		
+		printf("\n");
+		
+		if (l != NULL) {
+			*l = l2;
+		} 
+		if (r != NULL) {
+			*r = r2;
+		} 
+		if (throt != NULL) {
+			*throt = throttle;
+		}
+
+        }
+    }
+    //return ext.dev_id;
+}
+
+//unsigned short
+void
+psmove_set_ext_wheel(PSMove *move, int ruml, int rumr)
+{
+    psmove_return_if_fail(move != NULL);
+
+    if (psmove_ext_connected == 2)
+    {
+	
+        PSMove_Ext_Data data;
+	PSMove_Ext_Data *datap = &data;
+        if (psmove_get_ext_data(move, &data)) 
+	{
+                //handle_racing_wheel(move, &data, move_buttons);
+					
+		assert(datap != NULL);
+		unsigned char send_buf[3] = { 0x20, 0x00, 0x00 };
+		if (rumr >=0 && rumr <= 255) {
+			send_buf[1] = rumr;
+		} else {
+			send_buf[1] = 0;
+		}
+		if (rumr >=0 && rumr <= 255) {
+			send_buf[2] = ruml;
+		} else {
+			send_buf[2] = 0;
+		}
+		
+		if (!psmove_send_ext_data(move, send_buf, sizeof(send_buf))) {
+		    printf("Failed to send rumble data to Racing Wheel.\n");
+		}
+        }
+    }
+    //return ext.dev_id;
+}
+
+unsigned short
+psmove_get_ext_type(PSMove *move)
+{
+    psmove_return_val_if_fail(move != NULL, 0);
+        
+        if(psmove_is_ext_connected(move)) {
+            /* if the extension device was not connected before, report connect */
+            //if (!psmove_ext_connected) {
+                PSMove_Ext_Device_Info ext;
+                enum PSMove_Bool success = psmove_get_ext_device_info(move, &ext);
+
+                if (success) {
+                    switch (ext.dev_id) {
+                        case EXT_DEVICE_ID_SHARP_SHOOTER:
+                            ext_device = Ext_Sharp_Shooter;
+                            printf("Sharp Shooter extension connected!\n");
+			    psmove_ext_connected = 1;
+			    return 1;
+                            break;
+                        case EXT_DEVICE_ID_RACING_WHEEL:
+                            ext_device = Ext_Racing_Wheel;
+                            printf("Racing Wheel extension connected!\n");
+			    psmove_ext_connected = 2;
+			    return 2;
+                            break;
+                        default:
+                            ext_device = Ext_Unknown;
+                            printf("Unknown extension device (id 0x%04X) connected!\n", ext.dev_id);
+			    psmove_ext_connected = 3;
+			    return 3;
+                            break;
+                    }
+                }
+                else {
+                    printf("Unknown extension device connected! Failed to get device info.\n");
+		    return 0;
+                }
+            //}
+
+            //psmove_ext_connected = 1;
+
+            
+        } else {
+            /* if the extension device was connected before, report disconnect */
+            //if (psmove_ext_connected) {
+                printf("Extension device disconnected!\n");
+            //}
+		return 0;
+
+            psmove_ext_connected = 0;
+        }
+}
+
 
 void
 psmove_get_half_frame(PSMove *move, enum PSMove_Sensor sensor,
