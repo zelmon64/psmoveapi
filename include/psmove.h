@@ -810,6 +810,25 @@ ADDAPI unsigned char
 ADDCALL psmove_get_trigger(PSMove *move);
 
 /**
+ * \brief Get the latest value of the PS Move analog trigger.
+ *
+ * Get the current value of the PS Move analog trigger. The trigger
+ * is also exposed as digital button using psmove_get_buttons() in
+ * combination with \ref Btn_T.
+ *
+ * You need to call psmove_poll() first to read new data from the
+ * controller.
+ *
+ * \param move A valid \ref PSMove handle
+ *
+ * \return 0 if the trigger is not pressed
+ * \return 1-254 when the trigger is partially pressed
+ * \return 255 if the trigger is fully pressed
+ **/
+ADDAPI unsigned char
+ADDCALL psmove_get_trigger2(PSMove *move);
+
+/**
  * \brief Get the inputs from the sharp shooter if there is one
  *
  * This function checks if the racing wheel is connected and if
